@@ -317,9 +317,6 @@ static void HookDevice(VkDevice InDevice)
     o_WaitForPresentKHR = (PFN_vkWaitForPresentKHR) (vkGetDeviceProcAddr(InDevice, "vkWaitForPresentKHR"));
     o_WaitForPresent2KHR = (PFN_vkWaitForPresent2KHR) (vkGetDeviceProcAddr(InDevice, "vkWaitForPresent2KHR"));
 
-    LOG_INFO("PresentTrace HookDevice {:X}: QueuePresent {:X}, CreateSwapchain {:X}", (UINT64) InDevice,
-             (UINT64) o_QueuePresentKHR, (UINT64) o_CreateSwapchainKHR);
-
     if (o_CreateSwapchainKHR)
     {
         LOG_DEBUG("Hooking VkDevice");
@@ -931,21 +928,6 @@ static VkResult hkvkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPres
     // dxvk/vkd3d-proton presents are handled by the DXGI swapchain
     const bool dxgiBacked = IsDxgiBackedCaller(_ReturnAddress());
 
-    {
-        static int traceCount = 0;
-        static auto traceStart = std::chrono::steady_clock::now();
-        traceCount++;
-        auto traceNow = std::chrono::steady_clock::now();
-        if (traceNow - traceStart > std::chrono::seconds(2))
-        {
-            LOG_INFO("PresentTrace hooked presents in 2s: {}, last caller {}, swapchains {}, dxgi swapchain {:X}", traceCount,
-                     Util::WhoIsTheCaller(_ReturnAddress()), pPresentInfo->swapchainCount,
-                     (UINT64) _dxgiSwapchain);
-            traceCount = 0;
-            traceStart = traceNow;
-        }
-    }
-
     if (!dxgiBacked)
     {
         State::Instance().swapchainApi = Vulkan;
@@ -1478,11 +1460,6 @@ static VkResult hkvkWaitForPresent2KHR(VkDevice device, VkSwapchainKHR swapchain
 VALIDATE_HOOK(hkvkGetInstanceProcAddr, PFN_vkGetInstanceProcAddr)
 PFN_vkVoidFunction hkvkGetInstanceProcAddr(VkInstance instance, const char* pName)
 {
-    if (pName != nullptr && (std::strcmp(pName, "vkQueuePresentKHR") == 0 || std::strcmp(pName, "vkCreateSwapchainKHR") == 0 ||
-                             std::strcmp(pName, "vkGetDeviceProcAddr") == 0))
-        LOG_INFO("PresentTrace GIPA {} instance {:X} caller {}", pName, (UINT64) instance,
-                 Util::WhoIsTheCaller(_ReturnAddress()));
-
     auto orgFunc = o_vkGetInstanceProcAddr(instance, pName);
 
     if (orgFunc == VK_NULL_HANDLE)
@@ -1556,10 +1533,6 @@ VALIDATE_HOOK(hkvkGetDeviceProcAddr, PFN_vkGetDeviceProcAddr)
 PFN_vkVoidFunction hkvkGetDeviceProcAddr(VkDevice device, const char* pName)
 {
     auto orgFunc = o_vkGetDeviceProcAddr(device, pName);
-
-    if (pName != nullptr && (std::strcmp(pName, "vkQueuePresentKHR") == 0 || std::strcmp(pName, "vkCreateSwapchainKHR") == 0))
-        LOG_INFO("PresentTrace GDPA {} device {:X} caller {} -> {:X} (hooked QueuePresent {:X})", pName, (UINT64) device,
-                 Util::WhoIsTheCaller(_ReturnAddress()), (UINT64) orgFunc, (UINT64) o_QueuePresentKHR);
 
     if (orgFunc == VK_NULL_HANDLE)
         return VK_NULL_HANDLE;
