@@ -9370,11 +9370,14 @@ void MenuCommon::RenderVsyncSettings(RenderMenuContext& ctx)
             }
         }
     }
-    else
+
+    // Vulkan games, and D3D games under Proton once dxvk/vkd3d-proton's swapchain is seen (its present mode list)
+    if (state.swapchainApi == Vulkan || state.vkPresentModeMask != 0)
     {
-        SectionTitle("V-Sync Settings");
+        const bool underProton = state.swapchainApi != Vulkan;
+        SectionTitle(underProton ? "Present Mode (Proton)" : "V-Sync Settings");
         {
-            ScopedID sectionId { "V-Sync Settings" };
+            ScopedID sectionId { "Vulkan Present Mode" };
 
             const auto& forced = config->VulkanPresentMode;
             const char* preview = forced.has_value() ? VulkanHooks::PresentModeName(forced.value()) : "Game's";
