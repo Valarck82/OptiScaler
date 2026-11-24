@@ -1003,6 +1003,14 @@ static VkResult hkvkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPres
                 _dxgiForcedModes[i] =
                     localPresentInfo.pSwapchains[i] == _dxgiSwapchain ? _dxgiForcedMode : info->pPresentModes[i];
 
+            static VkPresentModeKHR lastLogged = VK_PRESENT_MODE_MAX_ENUM_KHR;
+            if (info->pPresentModes[0] != lastLogged || _dxgiForcedModes[0] != lastLogged)
+            {
+                LOG_DEBUG("dxvk/vkd3d-proton per present mode {} -> {}", VulkanHooks::PresentModeName(info->pPresentModes[0]),
+                          VulkanHooks::PresentModeName(_dxgiForcedModes[0]));
+                lastLogged = _dxgiForcedModes[0];
+            }
+
             dxgiModeInfo = info;
             dxgiModesOld = info->pPresentModes;
             info->pPresentModes = _dxgiForcedModes;
@@ -1279,7 +1287,11 @@ static VkResult hkvkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
     {
         _dxgiSwapchain = *pSwapchain;
         State::Instance().vkPresentModeChanged = false;
-        LOG_DEBUG("dxvk/vkd3d-proton swapchain: {0:X}", (UINT64) _dxgiSwapchain);
+        LOG_DEBUG("dxvk/vkd3d-proton swapchain: {0:X}, created with {}, mode list: {}, forced: {}", (UINT64) _dxgiSwapchain,
+                  VulkanHooks::PresentModeName(pCreateInfo->presentMode), dxgiModeList != nullptr ? "yes" : "no",
+                  _dxgiForcedMode != VK_PRESENT_MODE_MAX_ENUM_KHR ? VulkanHooks::PresentModeName(_dxgiForcedMode) : "none");
+        for (auto next = (const VkBaseInStructure*) pCreateInfo->pNext; next != nullptr; next = next->pNext)
+            LOG_DEBUG("  create info pNext sType: {}", (int) next->sType);
     }
 
     if (result == VK_SUCCESS && device != VK_NULL_HANDLE && pCreateInfo != nullptr && *pSwapchain != VK_NULL_HANDLE &&
