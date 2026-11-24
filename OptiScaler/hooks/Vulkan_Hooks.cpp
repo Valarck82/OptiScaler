@@ -1287,7 +1287,7 @@ static VkResult hkvkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
     {
         _dxgiSwapchain = *pSwapchain;
         State::Instance().vkPresentModeChanged = false;
-        LOG_DEBUG("dxvk/vkd3d-proton swapchain: {0:X}, created with {}, mode list: {}, forced: {}", (UINT64) _dxgiSwapchain,
+        LOG_DEBUG("dxvk/vkd3d-proton swapchain: {:X}, created with {}, mode list: {}, forced: {}", (UINT64) _dxgiSwapchain,
                   VulkanHooks::PresentModeName(pCreateInfo->presentMode), dxgiModeList != nullptr ? "yes" : "no",
                   _dxgiForcedMode != VK_PRESENT_MODE_MAX_ENUM_KHR ? VulkanHooks::PresentModeName(_dxgiForcedMode) : "none");
         for (auto next = (const VkBaseInStructure*) pCreateInfo->pNext; next != nullptr; next = next->pNext)
